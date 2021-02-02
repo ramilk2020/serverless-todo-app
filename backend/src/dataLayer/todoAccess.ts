@@ -2,9 +2,6 @@ import * as AWS from 'aws-sdk'
 import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 
-// var PDFDocument = require('pdfkit')
-// const doc = new PDFDocument();
-
 const XAWS = AWSXRay.captureAWS(AWS)
 
 import { TodoItem } from '../models/TodoItem'
@@ -46,8 +43,6 @@ export class TodoAccess {
         return todoItem
     }
 
-    
-
     async deleteTodo(todoId: string, userId: string): Promise<void> {
         await this.docClient.delete({
             TableName: this.todosTable,
@@ -55,9 +50,11 @@ export class TodoAccess {
                 todoId,
                 userId
             }
-        }).promise()
+        })
+        .promise()
     }
 
+    
     async updateTodo(todoId: string, userId: string, todoUpdate: TodoUpdate) {
         await this.docClient.update({
             TableName: this.todosTable,
@@ -115,7 +112,7 @@ export class TodoAccess {
     }
 
     async getCommentsByTodoId(todoId: string): Promise<CommentItem[]> {
-      console.log('Get comments by todoId')
+
       const result = await this.docClient.query({
           TableName: this.commentsTable,
           IndexName: this.commentsIndex,
@@ -129,51 +126,57 @@ export class TodoAccess {
       }
 
     async deleteComment(commentId: string, todoId: string): Promise<void> {
-      console.log('Inside TodoAccess')
         const result = await this.docClient.delete({
             TableName: this.commentsTable,
             Key: {
-                'commentId': commentId,
-                'todoId': todoId
+                commentId,
+                todoId
             }
-        }).promise()
+        })
+        .promise()
         console.log(result)
     }
 
-    async getPDF() {
-      console.log('Processing getSignedUrlPdfDownload()...')
-      // doc.text("Text for your PDF");
-      // doc.end();
+    async deleteAllTodoComments(todoId: string): Promise<void> {
 
-      // const params = {
-      //   Key : 'TEST',
-      //   Body : doc,
-      //   Bucket : this.bucketName,
-      //   ContentType : 'application/pdf'
-      // }
+      const results = await this.docClient.query({
+          TableName: this.commentsTable,
+          IndexName: this.commentsIndex,
+          KeyConditionExpression: 'todoId = :todoId',
+          ExpressionAttributeValues: {
+          ':todoId': todoId
+          }
+        })
+        .promise()
 
-      // const s3 = new AWS.S3({ signatureVersion: 'v4' })
-        
-      // s3.putObject(params, function(err, response) {
-      //   if (err) {
-      //     console.log('There is an error...')
-      //     return "http://error.err"
-      //   }
+      if (results.Items && results.Items.length > 0) {
 
-      //   console.log(response)
-      // });
 
-      // const url =  s3.getSignedUrl('getObject', {
-      //   Bucket: this.bucketName,
-      //   Key: 'TEST',
-      //   Expires: parseInt(this.urlExpiration)
-      // })
+        const batchCalls = chunks(results.Items, 25).map(async (chunk) => {
+          const deleteRequests = chunk.map( item => {
+            return {
+              DeleteRequest : {
+                Key : {
+                  'commentId' : item.commentId,
+                  'todoId' : item.todoId,
+                }
+              }
+            }
+          })
+      
+          const batchWriteParams = {
+            RequestItems: {
+              [this.commentsTable] : deleteRequests
+            }
+          }
 
-      return 'http://'
+          const a = await this.docClient.batchWrite(batchWriteParams).promise()
+          console.log('Batch delete response: ', a)
+        })
 
+      await Promise.all(batchCalls)
     }
-
-
+  }
 }
 
 function createDynamoDBClient(): DocumentClient {
@@ -187,4 +190,12 @@ function createDynamoDBClient(): DocumentClient {
   
     return new XAWS.DynamoDB.DocumentClient()
   }
-  
+
+// Helper function
+function chunks(inputArray, perChunk) {
+  return inputArray.reduce((all,one,i) => {
+    const ch = Math.floor(i/perChunk); 
+    all[ch] = [].concat((all[ch]||[]),one); 
+    return all
+  }, [])
+}

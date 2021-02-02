@@ -14,7 +14,7 @@ provider:
 
   tracing:
     lambda: true
-    apiGAteway: true 
+    apiGateway: true 
 
   name: aws
   runtime: nodejs12.x
@@ -149,6 +149,16 @@ functions:
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
       - Effect: Allow
         Action:
+          - dynamodb:Query
+          - dynamodb:DeleteItem
+          - dynamodb:BatchWriteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}/index/${self:provider.environment.COMMENTS_INDEX}
+      - Effect: Allow
+        Action:
           - 'xray:PutTraceSegments'
           - 'xray:PutTelemetryRecords'
         Resource:
@@ -226,30 +236,6 @@ functions:
       - http:
           method: get
           path: todos/{todoId}/comments
-          cors: true
-          authorizer: Auth0Authorizer
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - dynamodb:Query
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
-      - Effect: Allow
-        Action:
-          - dynamodb:Query
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}/index/${self:provider.environment.COMMENTS_INDEX}
-      - Effect: Allow
-        Action:
-          - 'xray:PutTraceSegments'
-          - 'xray:PutTelemetryRecords'
-        Resource:
-          - '*'
-
-  GetPDF:
-    handler: src/lambda/http/getPDF.handler
-    events:
-      - http:
-          method: get
-          path: pdf
           cors: true
           authorizer: Auth0Authorizer
     iamRoleStatements:

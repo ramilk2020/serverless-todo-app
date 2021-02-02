@@ -12,7 +12,8 @@ export async function getTodosByUserId(userId: string):Promise<TodoItem[]> {
 }
 
 export async function deleteTodo(todoId: string, userId: string):Promise<void> {
-    todoAccess.deleteTodo(todoId, userId)
+    await todoAccess.deleteTodo(todoId, userId)
+    await todoAccess.deleteAllTodoComments(todoId)
 }
 
 export async function createTodo(newTodo: CreateTodoRequest, userId: string):Promise<TodoItem> {
@@ -64,9 +65,5 @@ export async function getCommentsByTodoId(todoId: string):Promise<CommentItem[]>
 }
 
 export async function deleteComment(commentId: string, todoId: string):Promise<void> {
-    todoAccess.deleteComment(commentId, todoId)
-}
-
-export async function getPDF(): Promise<string> {
-    return todoAccess.getPDF()
+    await todoAccess.deleteComment(commentId, todoId)
 }
