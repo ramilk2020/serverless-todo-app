@@ -22,6 +22,8 @@ provider:
   environment:
     TODOS_TABLE: TodosTableV2-${self:provider.stage}
     TODOS_INDEX: TodosIndex
+    COMMENTS_TABLE: CommentsTable-${self:provider.stage}
+    COMMENTS_INDEX: CommentsIndex
     IMAGES_S3_BUCKET: mrp-serverless-todo-images-app-2021-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 3000
 
@@ -173,8 +175,118 @@ functions:
         Resource:
           - '*'
 
+  GenerateImageUrl:
+    handler: src/lambda/http/generateImageUrl.handler
+    events:
+      - http:
+          method: post
+          path: todos/{todoId}/attachment/url
+          cors: true
+          authorizer: Auth0Authorizer
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+          - s3:GetObject
+        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+      - Effect: Allow
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
   Auth0Authorizer:
     handler: src/lambda/auth/auth0Authorizer.handler
+
+  CreateTodoComment:
+    handler: src/lambda/http/createTodoComment.handler
+    events:
+      - http:
+          method: post
+          path: todos/{todoId}/comments
+          cors: true
+          authorizer: Auth0Authorizer
+
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: Allow
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
+  GetComments:
+    handler: src/lambda/http/getComments.handler
+    events:
+      - http:
+          method: get
+          path: todos/{todoId}/comments
+          cors: true
+          authorizer: Auth0Authorizer
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}/index/${self:provider.environment.COMMENTS_INDEX}
+      - Effect: Allow
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
+  GetPDF:
+    handler: src/lambda/http/getPDF.handler
+    events:
+      - http:
+          method: get
+          path: pdf
+          cors: true
+          authorizer: Auth0Authorizer
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}/index/${self:provider.environment.COMMENTS_INDEX}
+      - Effect: Allow
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
+  DeleteComment:
+    handler: src/lambda/http/deleteComment.handler
+    events:
+      - http:
+          method: delete
+          path: todos/{todoId}/comments/{commentId}
+          cors: true
+          authorizer: Auth0Authorizer
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: Allow
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
 
 resources:
   Resources:
@@ -206,6 +318,35 @@ resources:
 
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE}
+
+    CommentsDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: commentId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+          - AttributeName: todoId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: commentId
+            KeyType: HASH
+          - AttributeName: todoId
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.COMMENTS_INDEX}
+            KeySchema:
+            - AttributeName: todoId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.COMMENTS_TABLE}
 
     AttachmentBucket:
       Type: AWS::S3::Bucket

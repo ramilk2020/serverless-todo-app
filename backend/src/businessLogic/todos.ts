@@ -1,6 +1,7 @@
 import * as uuid from 'uuid'
 import { TodoAccess } from '../dataLayer/todoAccess'
 import { TodoItem } from '../models/TodoItem'
+import { CommentItem } from '../models/CommentItem'
 import { TodoUpdate } from '../models/TodoUpdate'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 
@@ -35,4 +36,37 @@ export async function updateTodo(todoId: string, userId: string, todoUpdate: Tod
 export async function getTodoUploadUrl(todoId: string):Promise<any> {
     return await todoAccess.getUploadUrl(todoId)
 
+}
+
+export async function getTodoImageUrl(todoId: string):Promise<any> {
+    return await todoAccess.getImageUrl(todoId)
+
+}
+
+
+export async function createComment(todoId: string, comment: string, userId: string):Promise<CommentItem> {
+    const commentId = uuid.v4()
+
+    const newItem = {
+        todoId: todoId,
+        commentId: commentId,
+        createdAt: new Date().toISOString(),
+        userId: userId,
+        comment
+      }
+
+    return todoAccess.createComment(newItem)
+}
+
+
+export async function getCommentsByTodoId(todoId: string):Promise<CommentItem[]> {
+    return todoAccess.getCommentsByTodoId(todoId)
+}
+
+export async function deleteComment(commentId: string, todoId: string):Promise<void> {
+    todoAccess.deleteComment(commentId, todoId)
+}
+
+export async function getPDF(): Promise<string> {
+    return todoAccess.getPDF()
 }
