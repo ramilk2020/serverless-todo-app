@@ -76,7 +76,7 @@ export class TodoAccess {
           }).promise()
     }
 
-    async getUploadUrl(todoId: string) {
+    async getUploadUrl(todoId: string, userId: string) {
 
         const s3 = new AWS.S3({ signatureVersion: 'v4' })
         
@@ -86,10 +86,12 @@ export class TodoAccess {
           Expires: parseInt(this.urlExpiration)
         })
 
+        await this.attachImageURLToTodo(todoId, userId)
+
         return uploadUrl
       }
 
-    async getImageUrl(todoId: string) {
+    async getImageUrl(todoId: string, userId: string) {
 
         const s3 = new AWS.S3({ signatureVersion: 'v4' })
         
@@ -99,8 +101,27 @@ export class TodoAccess {
           Expires: parseInt(this.urlExpiration)
         })
 
+        await this.attachImageURLToTodo(todoId, userId)
+
         return imageUrl
       }
+
+    async attachImageURLToTodo(todoId: string, userId: string) {
+      await this.docClient
+        .update({
+          TableName: this.todosTable,
+          Key: {
+            todoId,
+            userId
+          },
+          UpdateExpression: 'set attachmentUrl = :attachmentUrl',
+          ExpressionAttributeValues: {
+            ':attachmentUrl': `https://${this.bucketName}.s3.amazonaws.com/${todoId}`
+          },
+          ReturnValues: 'ALL_NEW'
+        })
+        .promise()
+    }
 
 
     async createComment(commentItem: CommentItem): Promise<CommentItem> {

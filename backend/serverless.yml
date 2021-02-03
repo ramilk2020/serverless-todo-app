@@ -175,25 +175,8 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
-          - s3:PutObject
-          - s3:GetObject
-        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
-      - Effect: Allow
-        Action:
-          - 'xray:PutTraceSegments'
-          - 'xray:PutTelemetryRecords'
-        Resource:
-          - '*'
-
-  GenerateImageUrl:
-    handler: src/lambda/http/generateImageUrl.handler
-    events:
-      - http:
-          method: post
-          path: todos/{todoId}/attachment/url
-          cors: true
-          authorizer: Auth0Authorizer
-    iamRoleStatements:
+          - dynamodb:UpdateItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
       - Effect: Allow
         Action:
           - s3:PutObject

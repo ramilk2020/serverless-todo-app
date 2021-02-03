@@ -34,13 +34,13 @@ export async function updateTodo(todoId: string, userId: string, todoUpdate: Tod
     return await todoAccess.updateTodo(todoId, userId, todoUpdate)
 }
 
-export async function getTodoUploadUrl(todoId: string):Promise<any> {
-    return await todoAccess.getUploadUrl(todoId)
+export async function getTodoUploadUrl(todoId: string, userId: string):Promise<any> {
+    return await todoAccess.getUploadUrl(todoId, userId)
 
 }
 
-export async function getTodoImageUrl(todoId: string):Promise<any> {
-    return await todoAccess.getImageUrl(todoId)
+export async function getTodoImageUrl(todoId: string, userId: string):Promise<any> {
+    return await todoAccess.getImageUrl(todoId, userId)
 
 }
 
